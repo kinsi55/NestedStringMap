@@ -171,5 +171,5 @@ static void NestedStringMapClose(NestedStringMap NSM) {
 		PrintToServer("[%i] Deleting self...", NSM);
 	#endif
 	
-	delete this;
+	delete NSM;
 }
