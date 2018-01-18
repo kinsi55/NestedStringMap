@@ -35,10 +35,14 @@ enum NSP_ITERATION {
 	Iterator_Enable		//Force iteration even if parent doesnt have it
 };
 
-//Extending Handle instead of ArrayList to not expose the ArrayList methods to ze public.
-methodmap NestedStringMapChildren < Handle {
-	public NestedStringMapChildren() {
-		return view_as<NestedStringMapChildren>(new ArrayList());
+//*not* making it a Handle to prevent people from trying to close it and thus breaking stuff.
+methodmap NestedStringMapChildren {
+	public NestedStringMapChildren(ArrayList AL = null) {
+		//If we call NestedStringMapChildren with no value we handle it like a Constructor
+		if(AL == null)
+			AL = new ArrayList();
+			
+		return view_as<NestedStringMapChildren>(AL);
 	}
 	
 	/**
@@ -73,15 +77,15 @@ methodmap NestedStringMap < StringMap {
 	/**
 	 * Create new NestedStringMap.
 	 *
-	 * @param enableEnumeration		Enable iteration of children.
+	 * @param enableIteration		Enable iteration of children.
 	 * @param maxChildNameLength	The maximum length a child's name can have. Needs to be only respected if used with iteration.
 	 * @return						New NestedStringMap.
 	 */
-	public NestedStringMap(bool enableEnumeration = false) {
+	public NestedStringMap(bool enableIteration = false) {
 		NestedStringMap NSM = view_as<NestedStringMap>(new StringMap());
 		
-		if(enableEnumeration) {
-			NestedStringMapChildren iterator = new NestedStringMapChildren();
+		if(enableIteration) {
+			NestedStringMapChildren iterator = NestedStringMapChildren();
 			//Index 0 of the ArrayList is a reference to this NSM
 			view_as<ArrayList>(iterator).Push(NSM);
 		
@@ -173,7 +177,7 @@ methodmap NestedStringMap < StringMap {
 		if(!this.GetValue(nestedKey, child)) {
 			bool bI = iteration == Iterator_Enable;
 			
-			if(!bI && iteration == Iterator_interhit) {
+			if(!bI && iteration == Iterator_Inherit) {
 				NestedStringMapChildren cc;
 				
 				bI = this.GetIterator(cc);
@@ -251,11 +255,11 @@ static void NestedStringMapClose(NestedStringMap NSM) {
 			NestedStringMapClose(otherNSM);
 			
 			#if defined DEBUG_NESTEDSTRINGMAP
-				PrintToServer("[%i] Closed nested Children ?... (%i)", NSM, otherNSM);
+				LogMessage("[%i] Closed nested Children ?... (%i)", NSM, otherNSM);
 			#endif
 		}
 		
-		delete NSPC;
+		delete view_as<ArrayList>(NSPC);
 	} else {
 		StringMapSnapshot stSn = NSM.Snapshot();
 	
@@ -268,7 +272,7 @@ static void NestedStringMapClose(NestedStringMap NSM) {
 				NestedStringMapClose(otherNSM);
 				
 				#if defined DEBUG_NESTEDSTRINGMAP
-					PrintToServer("[%i] Closed nested Children %s... (%i)", NSM, keyName, otherNSM);
+					LogMessage("[%i] Closed nested Children %s... (%i)", NSM, keyName, otherNSM);
 				#endif
 			}
 		}
@@ -279,7 +283,7 @@ static void NestedStringMapClose(NestedStringMap NSM) {
 		otherNSM.Remove(keyName);
 		
 		#if defined DEBUG_NESTEDSTRINGMAP
-			PrintToServer("[%i] Cleared NestedStringMap Key %s in parent (%i)...", NSM, keyName, otherNSM);
+			LogMessage("[%i] Cleared NestedStringMap Key %s in parent (%i)...", NSM, keyName, otherNSM);
 		#endif
 		
 		//Remove ourself from our parents Iterator
@@ -289,13 +293,13 @@ static void NestedStringMapClose(NestedStringMap NSM) {
 			view_as<ArrayList>(NSPC).Erase(IteratorPos);
 			
 			#if defined DEBUG_NESTEDSTRINGMAP
-				PrintToServer("[%i] Cleared Self (%s) from parents iterator (Index %i) in parent (%i)...", keyName, IteratorPos, otherNSM);
+				LogMessage("[%i] Cleared Self (%s) from parents iterator (Index %i) in parent (%i)...", NSM, keyName, IteratorPos, otherNSM);
 			#endif
 		}
 	}
 	
 	#if defined DEBUG_NESTEDSTRINGMAP
-		PrintToServer("[%i] Deleting self...", NSM);
+		LogMessage("[%i] Deleting self...", NSM);
 	#endif
 	
 	delete NSM;

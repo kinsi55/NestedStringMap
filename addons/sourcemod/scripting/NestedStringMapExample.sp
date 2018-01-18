@@ -32,18 +32,19 @@ public void OnPluginStart() {
 	//Retrieves the set key from the created sub-child
 	LogMessage("Read: %i", child.Child("child1").GetAndReturnValue("SomeKey"));
 	
-	//Creates some more sub-childs because why not
-	child.Child("child2");
-	child.Child("child3");
+	//Creates some more sub-childs because why not. We'll disable Iteration for these, 
+	//thus no ArrayLists will be created / maintained alongside of them.
+	child.Child("child2", Iterator_Disable);
+	child.Child("child3", Iterator_Disable);
 	
-	//iterating over the children of the NestedStringMap
-	NestedStringMapChildren NSPC;
+	//iterating over the children of the first child-NestedStringMap
+	NestedStringMapChildren NSMC;
 	
-	if(child.GetIterator(NSPC)) {
-		for(int i = 0; i < NSPC.Length; i++) {
+	if(child.GetIterator(NSMC)) {
+		for(int i = 0; i < NSMC.Length; i++) {
 			char childName[255];
 			
-			NestedStringMap x = view_as<NestedStringMap>(NSPC.GetChild(i));
+			NestedStringMap x = view_as<NestedStringMap>(NSMC.GetChild(i));
 			
 			x.GetName(childName, sizeof(childName));
 			
