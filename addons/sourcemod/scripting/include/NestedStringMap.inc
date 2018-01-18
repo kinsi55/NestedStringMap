@@ -23,13 +23,101 @@
 
 //#define DEBUG_NESTEDSTRINGMAP
 
-methodmap NestedStringMap < StringMap {
-	public NestedStringMap() {
-		return view_as<NestedStringMap>(new StringMap());
+//Special chars that are pretty unlikely to be used in that order by.. you?
+#define SM_PARENT_PREF "NSMP~#§°_"
+#define SM_CHILDTHIS_PREF "NSMT~#§°_"
+#define SM_CHILD_PREF "NSMC~#§°_"
+#define SM_ENUM_PREF "NSME~#§°_"
+
+enum NSP_ITERATION {
+	Iterator_Inerhit, 	//Only enable iteration if parent has done so
+	Iterator_Disable, 	//Disable iteration
+	Iterator_Enable		//Force iteration even if parent doesnt have it
+};
+
+//Extending Handle instead of ArrayList to not expose the ArrayList methods to ze public.
+methodmap NestedStringMapChildren < Handle {
+	public NestedStringMapChildren() {
+		return view_as<NestedStringMapChildren>(new ArrayList());
 	}
 	
 	/**
-	 * Add an existing children with no parent to this NestedStringMap.
+	 * The amount of children in the associated NestedStringMap
+	 *
+	 * @return						Amount of children
+	 */
+	property int Length {
+		public get() {
+			return view_as<ArrayList>(this).Length - 1;
+		}
+	}
+	
+	/**
+	 * Get a child based off its index. Due to SourceMod limitations i cannot properly return
+	 * a NestedStringMap, so you will need to view_as<NestedStringMap>(retval) yourself
+	 *
+     * @param index					Index of child to get
+	 * @return						Underlying StringMap(!) of NestedStringMap
+	 */
+	public StringMap GetChild(int index) {
+		if(index > this.Length || index < 0)
+			ThrowError("Child with index %i does not exist", index);
+
+		return view_as<ArrayList>(this).Get(index + 1);
+	}
+}
+
+methodmap NestedStringMap < StringMap {
+	/**
+	 * Create new NestedStringMap.
+	 *
+	 * @param enableEnumeration		Enable iteration of children.
+	 * @param maxChildNameLength	The maximum length a child's name can have. Needs to be only respected if used with iteration.
+	 * @return						New NestedStringMap.
+	 */
+	public NestedStringMap(bool enableEnumeration = false) {
+		NestedStringMap NSM = view_as<NestedStringMap>(new StringMap());
+		
+		if(enableEnumeration) {
+			NestedStringMapChildren iterator = new NestedStringMapChildren();
+			//Index 0 of the ArrayList is a reference to this NSM
+			view_as<ArrayList>(iterator).Push(NSM);
+		
+			NSM.SetValue(SM_ENUM_PREF, iterator);
+		}
+	
+		return NSM;
+	}
+	
+	/**
+	 * Get the name of this NestedStringMap if it is a child
+	 *
+	 * @param buffer		The buffer to set to the matching substring.
+	 * @param maxlen		The maximum string length of the buffer.
+	 * @return				True if self is a child, false if not.
+	 */
+	public bool GetName(char[] childName, int maxlen) {
+		if(this.GetString(SM_CHILDTHIS_PREF, childName, maxlen)) {
+			//Remove internal prefix from returned name
+			strcopy(childName, maxlen, childName[strlen(SM_CHILD_PREF)]);
+			
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Get a NestedStringMapChildren object for this NestedStringMap
+	 *
+	 * @param &childrenKeys			NestedStringMapChildren object or null
+	 * @return						True if iteration is enabled
+	 */
+	public bool GetIterator(NestedStringMapChildren &childrenKeys) {
+		return this.GetValue(SM_ENUM_PREF, childrenKeys);
+	}
+	
+	/**
+	 * Add an existing NestedStringMap with no parent as a child to this NestedStringMap.
 	 *
 	 * @param childToAdd			NestedStringMap to Add.
 	 * @param childName				Name to give the children.
@@ -40,15 +128,20 @@ methodmap NestedStringMap < StringMap {
 		if(strLen == 0)
 			ThrowError("childName cannot be empty");
 		
-		char[] nestedKey = new char[strLen + 32];
+		char[] nestedKey = new char[strLen + 16];
 		
-		Format(nestedKey, strLen + 32, "NestedStringMapChild__%s", childName);
+		Format(nestedKey, strLen + 16, "%s%s", SM_CHILD_PREF, childName);
 		
-		if(!childToAdd.SetValue("NestedStringMapParent__", this) ||
-			!childToAdd.SetString("NestedStringMapThisKey__", nestedKey))
+		if(!childToAdd.SetValue(SM_PARENT_PREF, this) ||
+			!childToAdd.SetString(SM_CHILDTHIS_PREF, nestedKey))
 			ThrowError("Assigning a child NestedStringMap to multiple Parents is not supported");
 		
 		this.SetValue(nestedKey, childToAdd);
+		
+		NestedStringMapChildren cc;
+		
+		if(this.GetIterator(cc))
+			view_as<ArrayList>(cc).Push(childToAdd);
 		
 		#if defined DEBUG_NESTEDSTRINGMAP
 			LogMessage("Added Children with name %s(%i) to self (%i)", childName, childToAdd, this);
@@ -59,9 +152,10 @@ methodmap NestedStringMap < StringMap {
 	 * Get a child NestedStringMap of this Parent if it exists, otherwise create a new one.
 	 *
 	 * @param childName				Name of the children.
+	 * @param iteration				If we should Inerhit, Disable, or Force iteration in this child. Only used if child doesnt exist.
 	 * @return						Found or newly created child NestedStringMap.
 	 */
-	public NestedStringMap Child(const char[] childName) {
+	public NestedStringMap Child(const char[] childName, NSP_ITERATION iteration = Iterator_Inerhit) {
 		int strLen = strlen(childName);
 	
 		if(strLen == 0)
@@ -69,12 +163,20 @@ methodmap NestedStringMap < StringMap {
 	
 		NestedStringMap child;
 		
-		char[] nestedKey = new char[strLen + 32];
+		char[] nestedKey = new char[strLen + 16];
 		
-		Format(nestedKey, strLen + 32, "NestedStringMapChild__%s", childName);
+		Format(nestedKey, strLen + 16, "%s%s", SM_CHILD_PREF, childName);
 		
 		if(!this.GetValue(nestedKey, child)) {
-			child = new NestedStringMap();
+			bool bI = iteration == Iterator_Enable;
+			
+			if(!bI && iteration == Iterator_interhit) {
+				NestedStringMapChildren cc;
+				
+				bI = this.GetIterator(cc);
+			}
+			
+			child = new NestedStringMap(bI);
 			
 			this.AddChild(child, childName);
 		}
@@ -91,7 +193,7 @@ methodmap NestedStringMap < StringMap {
 	public NestedStringMap Parent(bool errorIfTopLevel = true) {
 		NestedStringMap parent;
 		
-		if(!this.GetValue("NestedStringMapParent__", parent)) {
+		if(!this.GetValue(SM_PARENT_PREF, parent)) {
 			if(errorIfTopLevel)
 				ThrowError("NestedStringMap has no Parent");
 				
@@ -125,8 +227,6 @@ methodmap NestedStringMap < StringMap {
 //Needed to break out this function because when calling .Close on a NestedStringMap while
 //being in the Close function itself It would not use my function but the default one.
 static void NestedStringMapClose(NestedStringMap NSM) {
-	StringMapSnapshot stSn = NSM.Snapshot();
-	
 	char keyName[255];
 	NestedStringMap otherNSM;
 	
@@ -135,36 +235,60 @@ static void NestedStringMapClose(NestedStringMap NSM) {
 		LogMessage("[%i] Closing NestedStringMap...", NSM);
 	#endif
 	
-	#if defined DEBUG_NESTEDSTRINGMAP
-		if(stSn.Length > 2)
-			PrintToServer("[%i] Closing NestedStringMap Children...", NSM);
-	#endif
+	NestedStringMapChildren NSPC;
 	
-	for(int i = 0; i < stSn.Length; i++) {
-		stSn.GetKey(i, keyName, sizeof(keyName));
+	//If we have Iteration enabled we might as well make use of it
+	if(NSM.GetIterator(NSPC)) {
+		//Removing our own Iterator before removing our own children to save unnecessary operations
+		NSM.Remove(SM_ENUM_PREF);
 		
-		if(StrContains(keyName, "NestedStringMapChild__") == 0) {
-			#if defined DEBUG_NESTEDSTRINGMAP
-				PrintToServer("[%i] Closing nested Children %s...", NSM, keyName);
-			#endif
-		
-			NSM.GetValue(keyName, otherNSM);
+		for(int i = 0; i < NSPC.Length; i++) {
+			otherNSM = view_as<NestedStringMap>(NSPC.GetChild(i));
 			
 			NestedStringMapClose(otherNSM);
 			
 			#if defined DEBUG_NESTEDSTRINGMAP
-				PrintToServer("[%i] Closed nested Children %s... (%i)", NSM, keyName, otherNSM);
+				PrintToServer("[%i] Closed nested Children ?... (%i)", NSM, otherNSM);
 			#endif
+		}
+		
+		delete NSPC;
+	} else {
+		StringMapSnapshot stSn = NSM.Snapshot();
+	
+		for(int i = 0; i < stSn.Length; i++) {
+			stSn.GetKey(i, keyName, sizeof(keyName));
+			
+			if(StrContains(keyName, SM_CHILD_PREF) == 0) {
+				NSM.GetValue(keyName, otherNSM);
+				
+				NestedStringMapClose(otherNSM);
+				
+				#if defined DEBUG_NESTEDSTRINGMAP
+					PrintToServer("[%i] Closed nested Children %s... (%i)", NSM, keyName, otherNSM);
+				#endif
+			}
 		}
 	}
 	
-	if(NSM.GetValue("NestedStringMapParent__", otherNSM)) {
-		NSM.GetString("NestedStringMapThisKey__", keyName, sizeof(keyName));
+	if(NSM.GetValue(SM_PARENT_PREF, otherNSM)) {
+		NSM.GetString(SM_CHILDTHIS_PREF, keyName, sizeof(keyName));
 		otherNSM.Remove(keyName);
 		
 		#if defined DEBUG_NESTEDSTRINGMAP
 			PrintToServer("[%i] Cleared NestedStringMap Key %s in parent (%i)...", NSM, keyName, otherNSM);
 		#endif
+		
+		//Remove ourself from our parents Iterator
+		if(otherNSM.GetIterator(NSPC)) {
+			int IteratorPos = view_as<ArrayList>(NSPC).FindValue(NSM);
+			
+			view_as<ArrayList>(NSPC).Erase(IteratorPos);
+			
+			#if defined DEBUG_NESTEDSTRINGMAP
+				PrintToServer("[%i] Cleared Self (%s) from parents iterator (Index %i) in parent (%i)...", keyName, IteratorPos, otherNSM);
+			#endif
+		}
 	}
 	
 	#if defined DEBUG_NESTEDSTRINGMAP
