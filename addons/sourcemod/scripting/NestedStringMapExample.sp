@@ -20,8 +20,8 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	//Create a nested stringmap object
-	NestedStringMap topLevel = new NestedStringMap();
+	//Create a nested stringmap object with enabled Iteration
+	NestedStringMap topLevel = new NestedStringMap(true);
 	
 	//Child does not exist yet, will be created, written into the parent, and returned
 	NestedStringMap child = topLevel.Child("firstChild");
@@ -35,6 +35,21 @@ public void OnPluginStart() {
 	//Creates some more sub-childs because why not
 	child.Child("child2");
 	child.Child("child3");
+	
+	//iterating over the children of the NestedStringMap
+	NestedStringMapChildren NSPC;
+	
+	if(child.GetIterator(NSPC)) {
+		for(int i = 0; i < NSPC.Length; i++) {
+			char childName[255];
+			
+			NestedStringMap x = view_as<NestedStringMap>(NSPC.GetChild(i));
+			
+			x.GetName(childName, sizeof(childName));
+			
+			LogMessage("Child %i in NestedStringMap %i has name %s", i, child, childName);
+		}
+	}
 	
 	//Retrieve the sub-child from the child, go back to its parent again and close that.
 	//Yes, it essentially is no different than "child.Close()";
