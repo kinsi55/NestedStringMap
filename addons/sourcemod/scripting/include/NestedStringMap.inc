@@ -94,7 +94,7 @@ methodmap NestedStringMap < StringMap {
 	/**
 	 * Get the name of this NestedStringMap if it is a child
 	 *
-	 * @param buffer		The buffer to set to the matching substring.
+	 * @param childName		The buffer to set to the matching substring.
 	 * @param maxlen		The maximum string length of the buffer.
 	 * @return				True if self is a child, false if not.
 	 */
