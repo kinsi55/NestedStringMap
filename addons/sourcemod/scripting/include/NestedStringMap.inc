@@ -54,7 +54,7 @@ methodmap NestedStringMapChildren {
 		public get() {
 			//Index 0 is a reference to the (Nested)StringMap we belong to
 			//so we must subtract 1 from the real array length.
-			return view_as<ArrayList>(this).Length - 1;
+			return (view_as<ArrayList>(this)).Length - 1;
 		}
 	}
 	
@@ -69,7 +69,7 @@ methodmap NestedStringMapChildren {
 		if(index > this.Length || index < 0)
 			ThrowError("Child with index %i does not exist", index);
 
-		return view_as<ArrayList>(this).Get(index + 1);
+		return (view_as<ArrayList>(this)).Get(index + 1);
 	}
 }
 
@@ -87,7 +87,7 @@ methodmap NestedStringMap < StringMap {
 		if(enableIteration) {
 			NestedStringMapChildren iterator = NestedStringMapChildren();
 			//Index 0 of the ArrayList is a reference to this NSM
-			view_as<ArrayList>(iterator).Push(NSM);
+			(view_as<ArrayList>(iterator)).Push(NSM);
 		
 			NSM.SetValue(SM_ENUM_PREF, iterator);
 		}
@@ -148,7 +148,7 @@ methodmap NestedStringMap < StringMap {
 		
 		//We push ourself into the Iterator array in position 1 to have a reference back to us within the NestedStringMapChildren
 		if(this.GetIterator(cc))
-			view_as<ArrayList>(cc).Push(childToAdd);
+			(view_as<ArrayList>(cc)).Push(childToAdd);
 		
 		#if defined DEBUG_NESTEDSTRINGMAP
 			LogMessage("Added Children with name %s(%i) to self (%i)", childName, childToAdd, this);
@@ -288,9 +288,9 @@ static void NestedStringMapClose(NestedStringMap NSM) {
 		
 		//Remove ourself from our parents Iterator
 		if(otherNSM.GetIterator(NSPC)) {
-			int IteratorPos = view_as<ArrayList>(NSPC).FindValue(NSM);
+			int IteratorPos = (view_as<ArrayList>(NSPC)).FindValue(NSM);
 			
-			view_as<ArrayList>(NSPC).Erase(IteratorPos);
+			(view_as<ArrayList>(NSPC)).Erase(IteratorPos);
 			
 			#if defined DEBUG_NESTEDSTRINGMAP
 				LogMessage("[%i] Cleared Self (%s) from parents iterator (Index %i) in parent (%i)...", NSM, keyName, IteratorPos, otherNSM);
