@@ -48,6 +48,8 @@ methodmap NestedStringMapChildren < Handle {
 	 */
 	property int Length {
 		public get() {
+			//Index 0 is a reference to the (Nested)StringMap we belong to
+			//so we must subtract 1 from the real array lenght.
 			return view_as<ArrayList>(this).Length - 1;
 		}
 	}
@@ -140,6 +142,7 @@ methodmap NestedStringMap < StringMap {
 		
 		NestedStringMapChildren cc;
 		
+		//We push ourself into the Iterator array in position 1 to have a reference back to us within the NestedStringMapChildren
 		if(this.GetIterator(cc))
 			view_as<ArrayList>(cc).Push(childToAdd);
 		
