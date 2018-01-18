@@ -30,7 +30,7 @@
 #define SM_ENUM_PREF "NSME~#§°_"
 
 enum NSP_ITERATION {
-	Iterator_Inerhit, 	//Only enable iteration if parent has done so
+	Iterator_Inherit, 	//Only enable iteration if parent has done so
 	Iterator_Disable, 	//Disable iteration
 	Iterator_Enable		//Force iteration even if parent doesnt have it
 };
@@ -152,10 +152,10 @@ methodmap NestedStringMap < StringMap {
 	 * Get a child NestedStringMap of this Parent if it exists, otherwise create a new one.
 	 *
 	 * @param childName				Name of the children.
-	 * @param iteration				If we should Inerhit, Disable, or Force iteration in this child. Only used if child doesnt exist.
+	 * @param iteration				If we should Inherit, Disable, or Force iteration in this child. Only used if child doesnt exist.
 	 * @return						Found or newly created child NestedStringMap.
 	 */
-	public NestedStringMap Child(const char[] childName, NSP_ITERATION iteration = Iterator_Inerhit) {
+	public NestedStringMap Child(const char[] childName, NSP_ITERATION iteration = Iterator_Inherit) {
 		int strLen = strlen(childName);
 	
 		if(strLen == 0)
