@@ -104,7 +104,7 @@ methodmap NestedStringMap < StringMap {
 		public get() {
 			//Index 0 is a reference to the (Nested)StringMap we belong to
 			//so we must subtract 1 from the real array length.
-			return this.Size - 1;
+			return (enableIteration) ? this.Size - 1 : this.Size;
 		}
 	}
 	
