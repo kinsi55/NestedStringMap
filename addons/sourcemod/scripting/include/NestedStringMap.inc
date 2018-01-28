@@ -52,9 +52,10 @@ methodmap NestedStringMapChildren {
 	 */
 	property int Length {
 		public get() {
-			//Index 0 is a reference to the (Nested)StringMap we belong to
-			//so we must subtract 1 from the real array length.
-			return (view_as<ArrayList>(this)).Length - 1;
+			//Subtract 1 if it contains iterator
+			NestedStringMapChildren cc;
+
+			return (this.GetValue(SM_ENUM_PREF, cc)) ? this.Size - 1 : this.Size;
 		}
 	}
 	
