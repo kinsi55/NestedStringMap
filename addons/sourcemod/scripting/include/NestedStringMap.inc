@@ -94,6 +94,20 @@ methodmap NestedStringMap < StringMap {
 	
 		return NSM;
 	}
+
+	/**
+	 * The amount of children in the associated NestedStringMap
+	 *
+	 * @return						Amount of children
+	 */
+	property int Length {
+		public get() {
+			//Subtract 1 if it contains iterator
+			NestedStringMapChildren cc;
+
+			return (this.GetValue(SM_ENUM_PREF, cc)) ? this.Size - 1 : this.Size;
+		}
+	}
 	
 	/**
 	 * Get the name of this NestedStringMap if it is a child
