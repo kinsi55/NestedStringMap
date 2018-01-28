@@ -96,6 +96,19 @@ methodmap NestedStringMap < StringMap {
 	}
 	
 	/**
+	 * The amount of children in the associated NestedStringMap
+	 *
+	 * @return						Amount of children
+	 */
+	property int Length {
+		public get() {
+			//Index 0 is a reference to the (Nested)StringMap we belong to
+			//so we must subtract 1 from the real array length.
+			return this.Size - 1;
+		}
+	}
+	
+	/**
 	 * Get the name of this NestedStringMap if it is a child
 	 *
 	 * @param childName		The buffer to set to the matching substring.
