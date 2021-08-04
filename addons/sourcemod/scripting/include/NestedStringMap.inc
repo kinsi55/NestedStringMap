@@ -190,7 +190,22 @@ methodmap NestedStringMap < StringMap {
 
 		return child;
 	}
-	
+
+	public bool HasChild(const char[] childName) {
+		int strLen = strlen(childName);
+
+		if(strLen == 0)
+			ThrowError("childName cannot be empty");
+
+		NestedStringMap child;
+
+		char[] nestedKey = new char[strLen + 16];
+
+		Format(nestedKey, strLen + 16, "%s%s", SM_CHILD_PREF, childName);
+
+		return this.GetValue(nestedKey, child);
+	}
+
 	/**
 	 * Get the parent of this NestedStringMap.
 	 *
